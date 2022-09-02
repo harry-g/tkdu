@@ -3,6 +3,8 @@
 #    This is tkdu.py, an interactive program to display disk usage
 #    Copyright 2004 Jeff Epler <jepler@unpythonic.net>
 #
+#    This is the version ported to Python 3
+#
 #    This program is free software; you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
 #    the Free Software Foundation; either version 2 of the License, or
@@ -17,8 +19,8 @@
 #    along with this program; if not, write to the Free Software
 #    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
-import math, Tkinter, sys, os, stat, string, time, gzip, FileDialog
-from tkFileDialog import askdirectory
+import math, tkinter, sys, os, stat, string, time, gzip, tkinter.filedialog
+from tkinter.filedialog import askdirectory
 
 MIN_PSZ = 1000
 MIN_IPSZ = 240
@@ -42,10 +44,10 @@ def allocate(path, files, canvas, x, y, w, h, first, depth):
     if psz < MIN_PSZ: return
     if path and path[-1] == "/":
         basename_idx = len(path)
-        nslashes = string.count(path, os.sep) - 1
+        nslashes = path.count(os.sep) - 1
     else:
         basename_idx = len(path) + 1
-        nslashes = string.count(path, os.sep)
+        nslashes = path.count(os.sep)
     dircolor = dircolors[nslashes % len(dircolors)]
     leafcolor = leafcolors[nslashes % len(dircolors)]
     colors = (leafcolor, dircolor)
@@ -193,17 +195,17 @@ def run_queue(c):
         if time.time() > end: break
         item = queue[0]
         del queue[0]
-        apply(item[0], item[1:])
+        item[0](*item[1:])
     if queue:
         c.aid = c.after_idle(run_queue, c)
 
 def chroot(e, r):
     c = e.widget
+    if r is None:
+        return
     if not getkids(c.files, r):
         r = os.path.dirname(r)
         if r == c.cur: return
-    if r is None:
-        return
     if not r.startswith(c.root):
         c.bell()
         return
@@ -292,7 +294,7 @@ def reconfigure(e):
     if c.cur == "/":
         nslashes = -1
     else:
-        nslashes = string.count(c.cur, os.sep) - 1
+        nslashes = c.cur.count(os.sep) - 1
     parent = os.path.dirname(c.cur)
     color = dircolors[nslashes % len(dircolors)]
     c.configure(background=color)
@@ -322,16 +324,16 @@ def getkids(dict, path):
 def doit(dir, files):
     sorted_files = {}
     for k, v in files.items():
-        sv = map(lambda (k, v): [v, k, None], v.items())
-        sv.sort()
+        t = [k, v]
+        sv = sorted(map((lambda t: [t[1], t[0], None]), v.items()))
         sv.reverse()
         sorted_files[k] = (v, sv)
 
-    t = Tkinter.Tk()
-    c = Tkinter.Canvas(t, width=1024, height=768)
-    c.tip = Tkinter.Toplevel(t)
+    t = tkinter.Tk()
+    c = tkinter.Canvas(t, width=1024, height=768)
+    c.tip = tkinter.Toplevel(t)
     c.tip.wm_overrideredirect(1)
-    c.tipl = Tkinter.Label(c.tip)
+    c.tipl = tkinter.Label(c.tip)
     c.tipl.pack()
     c.pack(expand="yes", fill="both")
     c.files = sorted_files
@@ -369,13 +371,13 @@ def main(f = sys.stdin):
     files = {}
     firstfile = None
     for line in f.readlines():
-        sz, name = string.split(line[:-1], None, 1)
+        sz, name = line[:-1].split(None, 1)
 #       name = name.split("/")
-        sz = long(sz)*1024
+        sz = int(sz)*1024
         putname(files, name, sz)
     doit(name, files)
 
-def du(dir, files, fs=0, ST_MODE=stat.ST_MODE, ST_SIZE = stat.ST_SIZE, S_IFMT = 0170000, S_IFDIR = 0040000, lstat = os.lstat, putname_base = putname_base, fmt="%%s%s%%s" % os.sep):
+def du(dir, files, fs=0, ST_MODE=stat.ST_MODE, ST_SIZE = stat.ST_SIZE, S_IFMT = 0o170000, S_IFDIR = 0o040000, lstat = os.lstat, putname_base = putname_base, fmt="%%s%s%%s" % os.sep):
     tsz = 0
 
     try: fns = os.listdir(dir)
@@ -393,7 +395,7 @@ def du(dir, files, fs=0, ST_MODE=stat.ST_MODE, ST_SIZE = stat.ST_SIZE, S_IFMT = 
             continue
 
         if info[ST_MODE] & S_IFMT == S_IFDIR:
-            sz = du(fn, files) + long(info[ST_SIZE])
+            sz = du(fn, files) + int(info[ST_SIZE])
         else:
             sz = info[ST_SIZE]
         d[fn] = sz
@@ -403,9 +405,9 @@ def du(dir, files, fs=0, ST_MODE=stat.ST_MODE, ST_SIZE = stat.ST_SIZE, S_IFMT = 
 def abspath(p):
     return os.path.normpath(os.path.join(os.getcwd(), p))
 
-class DirDialog(FileDialog.LoadFileDialog):
+class DirDialog(tkinter.filedialog.LoadFileDialog):
     def __init__(self, master, title=None):
-        FileDialog.LoadFileDialog.__init__(self, master, title)
+        tkinter.filedialog.LoadFileDialog.__init__(self, master, title)
         self.files.destroy()
         self.filesbar.destroy()
 
@@ -445,11 +447,11 @@ def main_builtin_du(args):
     if len(args) > 1:
         p = args[1]
     else:
-        t = Tkinter.Tk()
+        t = tkinter.Tk()
         t.wm_withdraw()
         p = askdirectory()
-        if Tkinter._default_root is t:
-            Tkinter._default_root = None
+        if tkinter._default_root is t:
+            tkinter._default_root = None
         t.destroy()
         if p is None:
             return
@@ -457,19 +459,19 @@ def main_builtin_du(args):
 
     if p == '-h' or p == '--help' or p == '-?':
         base = os.path.basename(args[0])
-        print 'Usage:'
-        print ' ', base, '<file.gz>     interpret file as gzipped du -ak output and visualize it'
-        print ' ', base, '<file>        interpret file as du -ak output and visualize it'
-        print ' ', base, '<folder>      analyze disk usage in that folder'
-        print ' ', base, '-             interpret stdin input as du -ak output and visualize it'
-        print ' ', base, '              ask for folder to analyze'
+        print ('Usage:')
+        print (' ', base, '<file.gz>     interpret file as gzipped du -ak output and visualize it')
+        print (' ', base, '<file>        interpret file as du -ak output and visualize it')
+        print (' ', base, '<folder>      analyze disk usage in that folder')
+        print (' ', base, '-             interpret stdin input as du -ak output and visualize it')
+        print (' ', base, '              ask for folder to analyze')
         print
-        print 'Controls:'
-        print '  * Press `q` to quit'
-        print '  * LMB: zoom in to item'
-        print '  * RMB: zoom out one level'
-        print '  * Press `1`..`9`: Show that many nested levels'
-        print '  * Press `0`: Show man nested levels'
+        print ('Controls:')
+        print ('  * Press `q` to quit')
+        print ('  * LMB: zoom in to item')
+        print ('  * RMB: zoom out one level')
+        print ('  * Press `1`..`9`: Show that many nested levels')
+        print ('  * Press `0`: Show man nested levels')
         return
 
     if p == "-":
