@@ -25,4 +25,4 @@ Controls:
   * left mouse buton: zoom in to item
   * right mouse button: zoom out one level
   * Press `1`..`9`: Show that many nested levels
-  * Press `0`: Show man nested levels
+  * Press `0`: Show max nested levels
