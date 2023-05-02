@@ -17,6 +17,7 @@ Usage:
   tkdu.py               ask for folder to analyze (only works for folders!)
 ```
 Example for a gzipped input with timestamp in the file name:
+
 `time du -ak /my-main-dir | gzip > du.log-$( date +%Y%m%d-%H%M%S ).gz`
 
 Controls:
